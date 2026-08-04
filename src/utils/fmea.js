@@ -23,14 +23,49 @@ export function detectionScoreForTile(observations, detectionConfig) {
   return Math.round(score * 10) / 10
 }
 
-export function buildFmea(tiles, observations, severityByTile, detectionConfig) {
+// Finds the scale entry whose value is closest to a raw continuous score,
+// used only to seed a sensible default before the user has clicked a tile's
+// detection cell for the first time.
+export function nearestScaleValue(rawValue, scale) {
+  if (!scale || !scale.length) return rawValue
+  let best = scale[0]
+  let bestDiff = Math.abs(scale[0].value - rawValue)
+  scale.forEach((entry) => {
+    const diff = Math.abs(entry.value - rawValue)
+    if (diff < bestDiff) {
+      best = entry
+      bestDiff = diff
+    }
+  })
+  return best.value
+}
+
+// Given the currently selected value, returns the next value in the scale,
+// cycling back to the first entry after the last. Scale is sorted ascending
+// by value before cycling, regardless of the order it's stored in.
+export function nextScaleValue(currentValue, scale) {
+  if (!scale || !scale.length) return currentValue
+  const sorted = [...scale].sort((a, b) => a.value - b.value)
+  const idx = sorted.findIndex((entry) => entry.value === currentValue)
+  const nextIdx = idx === -1 ? 0 : (idx + 1) % sorted.length
+  return sorted[nextIdx].value
+}
+
+export function labelForScaleValue(value, scale) {
+  if (value == null || !scale) return null
+  const entry = scale.find((e) => e.value === value)
+  return entry ? entry.label : null
+}
+
+export function buildFmea(tiles, observations, severityByTile, detectionByTile, detectionConfig, scales) {
   return tiles
     .filter((t) => t.active !== false)
     .map((tile) => {
       const obsForTile = observations.filter((o) => o.eventId === tile.id)
       const occurrence = obsForTile.length
       const severity = severityByTile[tile.id] ?? null
-      const detection = detectionScoreForTile(obsForTile, detectionConfig)
+      const rawDetection = detectionScoreForTile(obsForTile, detectionConfig)
+      const detection = detectionByTile[tile.id] ?? nearestScaleValue(rawDetection, scales.detection)
       const rpn = severity != null ? Math.round(occurrence * severity * detection * 10) / 10 : null
       return {
         tileId: tile.id,

@@ -26,6 +26,18 @@ export function StoreProvider({ children }) {
     setData((d) => ({ ...d, tiles: d.tiles.filter((t) => t.id !== id) }))
   }, [])
 
+  const moveTile = useCallback((id, direction) => {
+    setData((d) => {
+      const idx = d.tiles.findIndex((t) => t.id === id)
+      const newIdx = idx + direction
+      if (idx === -1 || newIdx < 0 || newIdx >= d.tiles.length) return d
+      const tiles = [...d.tiles]
+      const [moved] = tiles.splice(idx, 1)
+      tiles.splice(newIdx, 0, moved)
+      return { ...d, tiles }
+    })
+  }, [])
+
   // ---- Observations ----
   const addObservation = useCallback((eventId, extra = {}) => {
     setData((d) => ({
@@ -180,6 +192,7 @@ export function StoreProvider({ children }) {
     addTile,
     updateTile,
     deleteTile,
+    moveTile,
     addObservation,
     addObservationsBatch,
     addObservationsByCount,

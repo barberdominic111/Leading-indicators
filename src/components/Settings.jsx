@@ -8,7 +8,7 @@ export default function Settings() {
   const { themeKey, setThemeKey, themes } = useTheme()
   const [newTime, setNewTime] = useState('09:00')
 
-  const { checkinTimes, detectionConfig } = store.settings
+  const { checkinTimes } = store.settings
 
   function addTime() {
     if (checkinTimes.includes(newTime)) return
@@ -17,12 +17,6 @@ export default function Settings() {
 
   function removeTime(t) {
     store.updateSettings({ checkinTimes: checkinTimes.filter((x) => x !== t) })
-  }
-
-  function updateWorkday(key, hours) {
-    store.updateSettings({
-      detectionConfig: { ...detectionConfig, [key]: hours * 60 }
-    })
   }
 
   function resetAllData() {
@@ -96,41 +90,10 @@ export default function Settings() {
         </div>
       </Section>
 
-      <Section title="Detection window">
-        <p className="li-muted" style={{ fontSize: 12.5, marginTop: -4, marginBottom: 10 }}>
-          Used to suggest a starting Detection value on the FMEA screen and to bound the Timeline axis. Events
-          near the start of this window suggest a better score; events near the end suggest a worse one.
-        </p>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <label style={{ fontSize: 13 }} className="li-muted">
-            Start
-            <input
-              type="number"
-              min={0}
-              max={23}
-              value={detectionConfig.workdayStartMin / 60}
-              onChange={(e) => updateWorkday('workdayStartMin', Number(e.target.value))}
-              style={{ width: 52, marginLeft: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)' }}
-            />
-            h
-          </label>
-          <label style={{ fontSize: 13 }} className="li-muted">
-            End
-            <input
-              type="number"
-              min={1}
-              max={24}
-              value={detectionConfig.workdayEndMin / 60}
-              onChange={(e) => updateWorkday('workdayEndMin', Number(e.target.value))}
-              style={{ width: 52, marginLeft: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)' }}
-            />
-            h
-          </label>
-        </div>
-      </Section>
-
       <ScaleSection title="Severity scale" category="severity" />
       <ScaleSection title="Detection scale" category="detection" />
+
+      <CompletionTypesSection />
 
       <Section title="Data">
         <p className="li-muted" style={{ fontSize: 12.5, marginTop: -4, marginBottom: 10 }}>
@@ -150,6 +113,87 @@ function Section({ title, children }) {
       <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
+  )
+}
+
+function CompletionTypesSection() {
+  const store = useStore()
+  const [name, setName] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editingName, setEditingName] = useState('')
+
+  function add() {
+    if (!name.trim()) return
+    store.addCompletionType(name)
+    setName('')
+  }
+
+  return (
+    <Section title="Check-in completions">
+      <p className="li-muted" style={{ fontSize: 12.5, marginTop: -4, marginBottom: 10 }}>
+        At each check-in, alongside logging events, you're asked what finished work you completed since the last
+        one — separate from how many tiles you tapped. Define the things worth counting here, or add new ones
+        right at check-in.
+      </p>
+
+      {store.completionTypes.map((c) => {
+        const isEditing = editingId === c.id
+        return (
+          <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+            {isEditing ? (
+              <input
+                autoFocus
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    store.updateCompletionType(c.id, { name: editingName.trim() || c.name })
+                    setEditingId(null)
+                  }
+                }}
+                onBlur={() => {
+                  store.updateCompletionType(c.id, { name: editingName.trim() || c.name })
+                  setEditingId(null)
+                }}
+                style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
+              />
+            ) : (
+              <button
+                onClick={() => {
+                  setEditingId(c.id)
+                  setEditingName(c.name)
+                }}
+                style={{ flex: 1, textAlign: 'left', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-alt)', fontSize: 13 }}
+              >
+                {c.name}
+              </button>
+            )}
+            <button onClick={() => store.deleteCompletionType(c.id)} style={{ color: 'var(--danger)', padding: 4 }}>
+              <IconX width={15} height={15} />
+            </button>
+          </div>
+        )
+      })}
+
+      {store.completionTypes.length === 0 && (
+        <p className="li-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>
+          Nothing defined yet — try something like "Finished goods" or "Quotes closed."
+        </p>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && add()}
+          placeholder="e.g. Finished goods"
+          style={{ flex: 1, padding: '9px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-alt)', fontSize: 13 }}
+        />
+        <button onClick={add} style={{ background: 'var(--accent)', color: 'var(--accent-contrast)', borderRadius: 8, padding: '0 16px' }}>
+          <IconPlus width={16} height={16} />
+        </button>
+      </div>
+    </Section>
   )
 }
 

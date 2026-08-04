@@ -88,6 +88,16 @@ export function IconExport(props) {
   )
 }
 
+export function IconImport(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 15V3" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+    </svg>
+  )
+}
+
 export function IconSun(props) {
   return (
     <svg {...base} {...props}>
@@ -142,6 +152,17 @@ export function IconChevronDown(props) {
   return (
     <svg {...base} {...props}>
       <path d="M6 9l6 6 6-6" />
+    </svg>
+  )
+}
+
+export function IconRefresh(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 4v5h5" />
+      <path d="M20 20v-5h-5" />
+      <path d="M5.5 9a7 7 0 0 1 12.3-3.5L20 8" />
+      <path d="M18.5 15a7 7 0 0 1-12.3 3.5L4 16" />
     </svg>
   )
 }

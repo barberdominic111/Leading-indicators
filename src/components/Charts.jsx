@@ -61,16 +61,16 @@ export default function Charts() {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 14 }}>
         {SUBTABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setSub(t.key)}
             style={{
-              padding: '7px 13px',
+              padding: '8px 6px',
               borderRadius: 999,
               fontSize: 12.5,
-              whiteSpace: 'nowrap',
+              textAlign: 'center',
               border: `1px solid ${sub === t.key ? 'var(--accent)' : 'var(--border)'}`,
               color: sub === t.key ? 'var(--accent)' : 'var(--text-muted)',
               background: sub === t.key ? 'var(--accent-soft)' : 'transparent'

@@ -28,6 +28,18 @@ export default function Dashboard({ onNavigate }) {
   const upcoming = nextCheckIn(store.settings.checkinTimes)
   const activeProject = store.projects.find((p) => p.id === store.settings.activeProjectId)
 
+  const todayCompletions = useMemo(() => {
+    const start = startOfDay()
+    const byType = {}
+    store.completions.forEach((c) => {
+      if (c.timestamp < start) return
+      byType[c.completionTypeId] = (byType[c.completionTypeId] || 0) + c.quantity
+    })
+    return Object.entries(byType)
+      .map(([id, qty]) => ({ name: store.completionTypes.find((t) => t.id === id)?.name || 'Unknown', qty }))
+      .sort((a, b) => b.qty - a.qty)
+  }, [store.completions, store.completionTypes])
+
   return (
     <div>
       <h1 style={{ margin: '0 0 14px', fontSize: 20, fontWeight: 600 }}>Today</h1>
@@ -58,6 +70,20 @@ export default function Dashboard({ onNavigate }) {
           Manage projects →
         </button>
       </div>
+
+      {todayCompletions.length > 0 && (
+        <div className="li-card" style={{ padding: 16, marginBottom: 10 }}>
+          <div className="li-muted" style={{ fontSize: 12, marginBottom: 8 }}>
+            Completed today
+          </div>
+          {todayCompletions.map((c) => (
+            <div key={c.name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, padding: '4px 0' }}>
+              <span>{c.name}</span>
+              <span className="li-mono" style={{ fontWeight: 600 }}>{c.qty}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="li-card" style={{ padding: 16 }}>
         <div className="li-muted" style={{ fontSize: 12, marginBottom: 8 }}>

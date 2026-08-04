@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
-import { IconPlus, IconX, IconCheck } from './icons'
+import { IconPlus, IconX, IconCheck, IconImport } from './icons'
 
 export default function Projects() {
   const store = useStore()
   const [name, setName] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editingName, setEditingName] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importText, setImportText] = useState('')
+  const fileInputRef = useRef(null)
 
   function add() {
     if (!name.trim()) return
@@ -14,12 +17,108 @@ export default function Projects() {
     setName('')
   }
 
+  function parseImportNames(text) {
+    // Accepts one project per line, and/or comma-separated on a line —
+    // covers a plain list, a single CSV column, or a comma-separated row.
+    return text
+      .split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+  }
+
+  function runImport() {
+    const names = parseImportNames(importText)
+    if (names.length) store.importProjects(names)
+    setImportText('')
+    setImporting(false)
+  }
+
+  function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setImportText((prev) => (prev ? `${prev}\n${reader.result}` : String(reader.result)))
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
   return (
     <div>
-      <h1 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 600 }}>Projects</h1>
-      <p className="li-muted" style={{ margin: '0 0 14px', fontSize: 13 }}>
-        Tag observations to a project, then filter Timeline, FMEA and Charts by it.
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Projects</h1>
+          <p className="li-muted" style={{ margin: '2px 0 14px', fontSize: 13 }}>
+            Tag observations to a project, then filter Timeline, FMEA and Charts by it.
+          </p>
+        </div>
+        <button
+          onClick={() => setImporting((v) => !v)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12.5,
+            color: 'var(--accent)',
+            border: '1px solid var(--border)',
+            borderRadius: 999,
+            padding: '7px 12px',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <IconImport width={14} height={14} />
+          Import
+        </button>
+      </div>
+
+      {importing && (
+        <div className="li-card" style={{ padding: 14, marginBottom: 16 }}>
+          <p className="li-muted" style={{ fontSize: 12.5, margin: '0 0 8px' }}>
+            Paste project names — one per line, or comma-separated — or import a .txt/.csv file. Duplicates of
+            projects you already have are skipped automatically.
+          </p>
+          <textarea
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder={'Project A\nProject B\nProject C'}
+            rows={4}
+            style={{
+              width: '100%',
+              resize: 'none',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              padding: 10,
+              background: 'var(--surface-alt)',
+              fontSize: 13.5,
+              marginBottom: 10
+            }}
+          />
+          <input ref={fileInputRef} type="file" accept=".txt,.csv" onChange={handleFile} style={{ display: 'none' }} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              style={{ flex: 1, fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 0' }}
+            >
+              Choose file
+            </button>
+            <button
+              onClick={runImport}
+              disabled={!importText.trim()}
+              style={{
+                flex: 1,
+                fontSize: 13,
+                fontWeight: 600,
+                background: 'var(--accent)',
+                color: 'var(--accent-contrast)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '10px 0',
+                opacity: importText.trim() ? 1 : 0.5
+              }}
+            >
+              Add all
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <input

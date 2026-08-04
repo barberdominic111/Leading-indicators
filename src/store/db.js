@@ -43,6 +43,7 @@ const DEFAULT_DATA = {
     severityByTile: {},
     detectionByTile: {},
     scales: DEFAULT_SCALES,
+    tileSize: 50,
     lastCheckInHandled: {} // { "2026-08-03": ["08:00", "10:00"] }
   }
 }

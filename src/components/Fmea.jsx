@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
 import ScaleCycler from './ScaleCycler.jsx'
 import { sortFmeaRows } from '../utils/fmea'
-import { IconRefresh } from './icons'
+import { IconRefresh, IconCheck } from './icons'
 
 // Description font shrinks as it gets longer so a full 160-character note
 // still fits the card without needing extra vertical space per row.
@@ -20,6 +20,7 @@ export default function Fmea() {
   // Severity or Detection value on one card never causes another card to
   // jump underneath your next tap.
   const [order, setOrder] = useState(() => sortFmeaRows(store.fmeaRows).map((r) => r.tileId))
+  const [justRefreshed, setJustRefreshed] = useState(false)
 
   const rowsById = useMemo(() => {
     const map = {}
@@ -37,6 +38,8 @@ export default function Fmea() {
 
   function refresh() {
     setOrder(sortFmeaRows(store.fmeaRows).map((r) => r.tileId))
+    setJustRefreshed(true)
+    setTimeout(() => setJustRefreshed(false), 1100)
   }
 
   return (
@@ -46,21 +49,25 @@ export default function Fmea() {
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>FMEA</h1>
         </div>
         <button
+          type="button"
           onClick={refresh}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 6,
             fontSize: 12.5,
-            color: 'var(--accent)',
-            border: '1px solid var(--border)',
+            color: justRefreshed ? 'var(--success)' : 'var(--accent)',
+            border: `1px solid ${justRefreshed ? 'var(--success)' : 'var(--border)'}`,
             borderRadius: 999,
-            padding: '7px 12px',
-            whiteSpace: 'nowrap'
+            padding: '9px 14px',
+            minHeight: 'var(--tap-min)',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+            transition: 'color 0.15s ease, border-color 0.15s ease'
           }}
         >
-          <IconRefresh width={14} height={14} />
-          Refresh order
+          {justRefreshed ? <IconCheck width={14} height={14} /> : <IconRefresh width={14} height={14} />}
+          {justRefreshed ? 'Updated' : 'Refresh order'}
         </button>
       </div>
       <p className="li-muted" style={{ margin: '2px 0 14px', fontSize: 13 }}>

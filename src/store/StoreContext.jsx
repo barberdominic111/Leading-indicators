@@ -61,6 +61,30 @@ export function StoreProvider({ children }) {
     })
   }, [])
 
+  // Same as addObservationsBatch, but accepts { eventId: count } so a
+  // single check-in can log an event more than once (e.g. it happened
+  // three times since the last check-in).
+  const addObservationsByCount = useCallback((countsMap, extra = {}) => {
+    setData((d) => {
+      const now = Date.now()
+      const created = []
+      Object.entries(countsMap).forEach(([eventId, count]) => {
+        for (let i = 0; i < count; i++) {
+          created.push({
+            id: newId('obs'),
+            timestamp: now,
+            eventId,
+            note: extra.note || '',
+            project: extra.project || d.settings.activeProjectId || '',
+            customer: extra.customer || '',
+            severity: null
+          })
+        }
+      })
+      return { ...d, observations: [...d.observations, ...created] }
+    })
+  }, [])
+
   const deleteObservation = useCallback((id) => {
     setData((d) => ({ ...d, observations: d.observations.filter((o) => o.id !== id) }))
   }, [])
@@ -90,6 +114,20 @@ export function StoreProvider({ children }) {
     }))
   }, [])
 
+  const setDetection = useCallback((tileId, detection) => {
+    setData((d) => ({
+      ...d,
+      settings: { ...d.settings, detectionByTile: { ...d.settings.detectionByTile, [tileId]: detection } }
+    }))
+  }, [])
+
+  const updateScales = useCallback((category, scale) => {
+    setData((d) => ({
+      ...d,
+      settings: { ...d.settings, scales: { ...d.settings.scales, [category]: scale } }
+    }))
+  }, [])
+
   const markCheckInHandled = useCallback((time) => {
     setData((d) => {
       const today = fmtDate(Date.now())
@@ -109,8 +147,23 @@ export function StoreProvider({ children }) {
 
   // ---- Derived selectors ----
   const fmeaRows = useMemo(
-    () => buildFmea(data.tiles, data.observations, data.settings.severityByTile, data.settings.detectionConfig),
-    [data.tiles, data.observations, data.settings.severityByTile, data.settings.detectionConfig]
+    () =>
+      buildFmea(
+        data.tiles,
+        data.observations,
+        data.settings.severityByTile,
+        data.settings.detectionByTile,
+        data.settings.detectionConfig,
+        data.settings.scales
+      ),
+    [
+      data.tiles,
+      data.observations,
+      data.settings.severityByTile,
+      data.settings.detectionByTile,
+      data.settings.detectionConfig,
+      data.settings.scales
+    ]
   )
 
   const filterByProject = useCallback(
@@ -129,12 +182,15 @@ export function StoreProvider({ children }) {
     deleteTile,
     addObservation,
     addObservationsBatch,
+    addObservationsByCount,
     deleteObservation,
     addProject,
     updateProject,
     deleteProject,
     updateSettings,
     setSeverity,
+    setDetection,
+    updateScales,
     markCheckInHandled,
     filterByProject,
     replaceAll,

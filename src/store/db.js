@@ -19,6 +19,19 @@ const DEFAULT_TILES = [
   { id: 'project_updated', name: 'Project updated', color: '#6B8F71', category: 'Admin', active: true }
 ]
 
+const DEFAULT_SCALES = {
+  severity: [
+    { value: 1, label: 'Minor' },
+    { value: 5, label: 'Moderate' },
+    { value: 10, label: 'Critical' }
+  ],
+  detection: [
+    { value: 1, label: 'Consistent' },
+    { value: 5, label: 'Predictable' },
+    { value: 10, label: 'Surprise' }
+  ]
+}
+
 const DEFAULT_DATA = {
   tiles: DEFAULT_TILES,
   observations: [],
@@ -28,6 +41,8 @@ const DEFAULT_DATA = {
     detectionConfig: DEFAULT_DETECTION_CONFIG,
     activeProjectId: null,
     severityByTile: {},
+    detectionByTile: {},
+    scales: DEFAULT_SCALES,
     lastCheckInHandled: {} // { "2026-08-03": ["08:00", "10:00"] }
   }
 }

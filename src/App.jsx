@@ -55,6 +55,8 @@ export default function App() {
       tiles: store.tiles,
       observations: store.observations,
       projects: store.projects,
+      completionTypes: store.completionTypes,
+      completions: store.completions,
       settings: store.settings,
       fmeaRows: store.fmeaRows,
       pareto,

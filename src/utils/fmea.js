@@ -58,7 +58,17 @@ export function labelForScaleValue(value, scale) {
 }
 
 export function sortFmeaRows(rows) {
-  return [...rows].sort((a, b) => (b.rpn ?? -1) - (a.rpn ?? -1))
+  return [...rows].sort((a, b) => {
+    // Rows with a real RPN (severity has been set) always outrank rows
+    // that don't have one yet. Among ties — including the common case
+    // where nothing has severity set yet — fall back to occurrence, so
+    // "Refresh order" always has a visible effect instead of looking
+    // like a no-op / broken button when RPN is still null everywhere.
+    const aRpn = a.rpn ?? -Infinity
+    const bRpn = b.rpn ?? -Infinity
+    if (bRpn !== aRpn) return bRpn - aRpn
+    return b.occurrence - a.occurrence
+  })
 }
 
 export function buildFmea(tiles, observations, severityByTile, detectionByTile, detectionConfig, scales) {

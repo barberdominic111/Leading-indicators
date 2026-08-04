@@ -1,26 +1,36 @@
 import { useState } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
-import { IconCheck, IconX } from './icons'
+import { IconX, IconMinus } from './icons'
 
 export default function CheckInModal({ time, onDone }) {
   const store = useStore()
-  const [selected, setSelected] = useState(new Set())
+  const [counts, setCounts] = useState({}) // { tileId: count }
+  const [pulsing, setPulsing] = useState(null)
   const [note, setNote] = useState('')
 
   const activeTiles = store.tiles.filter((t) => t.active !== false)
+  const totalTapped = Object.values(counts).reduce((s, c) => s + c, 0)
 
-  function toggle(id) {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+  function increment(id) {
+    setCounts((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }))
+    setPulsing(id)
+    setTimeout(() => setPulsing((cur) => (cur === id ? null : cur)), 420)
+  }
+
+  function decrement(id, e) {
+    e.stopPropagation()
+    setCounts((prev) => {
+      const next = { ...prev }
+      if (!next[id]) return prev
+      next[id] -= 1
+      if (next[id] <= 0) delete next[id]
       return next
     })
   }
 
   function submit() {
-    if (selected.size) {
-      store.addObservationsBatch(Array.from(selected), { note })
+    if (totalTapped > 0) {
+      store.addObservationsByCount(counts, { note })
     }
     onDone()
   }
@@ -64,7 +74,7 @@ export default function CheckInModal({ time, onDone }) {
         </div>
 
         <p className="li-muted" style={{ fontSize: 13, marginTop: 8 }}>
-          Tap everything that happened. No judgment, no rush — this is just for the record.
+          Tap a tile for each time it happened. No judgment, no rush — this is just for the record.
         </p>
 
         <div
@@ -76,41 +86,77 @@ export default function CheckInModal({ time, onDone }) {
           }}
         >
           {activeTiles.map((tile) => {
-            const isSel = selected.has(tile.id)
+            const count = counts[tile.id] || 0
+            const isSel = count > 0
+            const isPulsing = pulsing === tile.id
             return (
               <button
                 key={tile.id}
-                onClick={() => toggle(tile.id)}
+                onClick={() => increment(tile.id)}
+                className={isPulsing ? 'li-tile-pulse li-tile-flash' : ''}
                 style={{
+                  position: 'relative',
                   borderRadius: 'var(--radius-md)',
                   padding: '16px 12px',
-                  minHeight: 72,
+                  minHeight: 76,
                   textAlign: 'left',
                   border: `1.5px solid ${isSel ? tile.color : 'var(--border)'}`,
-                  background: isSel ? `${tile.color}22` : 'var(--surface-alt)',
+                  background: isSel ? `${tile.color}1c` : 'var(--surface-alt)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 8,
                   justifyContent: 'space-between',
-                  transition: 'all 0.15s ease'
+                  transition: 'border-color 0.15s ease, background-color 0.15s ease',
+                  '--flash-color': `${tile.color}40`
                 }}
               >
-                <span style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.25 }}>{tile.name}</span>
-                <span
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: '50%',
-                    border: `1.5px solid ${isSel ? tile.color : 'var(--border)'}`,
-                    background: isSel ? tile.color : 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--accent-contrast)'
-                  }}
-                >
-                  {isSel && <IconCheck width={13} height={13} strokeWidth={2.4} />}
-                </span>
+                <span style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.25, paddingRight: 22 }}>{tile.name}</span>
+
+                {isSel && (
+                  <button
+                    onClick={(e) => decrement(tile.id, e)}
+                    aria-label={`Reduce ${tile.name} count`}
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      width: 22,
+                      height: 22,
+                      borderRadius: '50%',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <IconMinus width={11} height={11} />
+                  </button>
+                )}
+
+                {isSel && (
+                  <span
+                    key={count}
+                    className="li-counter-pop"
+                    style={{
+                      alignSelf: 'flex-end',
+                      minWidth: 26,
+                      height: 26,
+                      padding: '0 7px',
+                      borderRadius: 13,
+                      background: tile.color,
+                      color: '#fff',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
             )
           })}
@@ -145,7 +191,7 @@ export default function CheckInModal({ time, onDone }) {
             fontWeight: 600
           }}
         >
-          {selected.size ? `Log ${selected.size} event${selected.size > 1 ? 's' : ''}` : 'Nothing to log — close'}
+          {totalTapped ? `Log ${totalTapped} event${totalTapped > 1 ? 's' : ''}` : 'Nothing to log — close'}
         </button>
       </div>
     </div>

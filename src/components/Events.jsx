@@ -1,20 +1,30 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
 import TileEditor from './TileEditor.jsx'
-import { IconPlus, IconCheck } from './icons'
+import { IconPlus } from './icons'
+import { startOfDay } from '../utils/time'
 
 export default function Events() {
   const store = useStore()
   const [manage, setManage] = useState(false)
   const [editing, setEditing] = useState(null) // tile or 'new' or null
-  const [justLogged, setJustLogged] = useState(null)
+  const [pulsing, setPulsing] = useState(null) // tile id currently animating
 
   const tiles = manage ? store.tiles : store.tiles.filter((t) => t.active !== false)
 
+  const todayCounts = useMemo(() => {
+    const start = startOfDay()
+    const counts = {}
+    store.observations.forEach((o) => {
+      if (o.timestamp >= start) counts[o.eventId] = (counts[o.eventId] || 0) + 1
+    })
+    return counts
+  }, [store.observations])
+
   function logTile(id) {
     store.addObservation(id)
-    setJustLogged(id)
-    setTimeout(() => setJustLogged((cur) => (cur === id ? null : cur)), 900)
+    setPulsing(id)
+    setTimeout(() => setPulsing((cur) => (cur === id ? null : cur)), 420)
   }
 
   return (
@@ -41,34 +51,60 @@ export default function Events() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-        {tiles.map((tile) => (
-          <button
-            key={tile.id}
-            onClick={() => (manage ? setEditing(tile) : logTile(tile.id))}
-            className="li-card"
-            style={{
-              padding: '18px 14px',
-              minHeight: 84,
-              textAlign: 'left',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: 10,
-              opacity: tile.active === false ? 0.45 : 1,
-              borderLeft: `4px solid ${tile.color}`
-            }}
-          >
-            <span style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.25 }}>{tile.name}</span>
-            <span className="li-muted" style={{ fontSize: 11 }}>
-              {tile.category || 'Uncategorized'}
-            </span>
-            {justLogged === tile.id && (
-              <span style={{ position: 'absolute' }} aria-hidden>
-                <IconCheck />
+        {tiles.map((tile) => {
+          const count = todayCounts[tile.id] || 0
+          const isPulsing = pulsing === tile.id
+          return (
+            <button
+              key={tile.id}
+              onClick={() => (manage ? setEditing(tile) : logTile(tile.id))}
+              className={`li-card${isPulsing ? ' li-tile-pulse li-tile-flash' : ''}`}
+              style={{
+                position: 'relative',
+                padding: '18px 14px',
+                minHeight: 84,
+                textAlign: 'left',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: 10,
+                opacity: tile.active === false ? 0.45 : 1,
+                borderLeft: `4px solid ${tile.color}`,
+                '--flash-color': `${tile.color}33`
+              }}
+            >
+              <span style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.25 }}>{tile.name}</span>
+              <span className="li-muted" style={{ fontSize: 11 }}>
+                {tile.category || 'Uncategorized'}
               </span>
-            )}
-          </button>
-        ))}
+
+              {!manage && count > 0 && (
+                <span
+                  key={count}
+                  className="li-counter-pop"
+                  style={{
+                    position: 'absolute',
+                    bottom: 8,
+                    right: 8,
+                    minWidth: 22,
+                    height: 22,
+                    padding: '0 6px',
+                    borderRadius: 11,
+                    background: tile.color,
+                    color: '#fff',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
 
         {manage && (
           <button
@@ -91,6 +127,12 @@ export default function Events() {
           </button>
         )}
       </div>
+
+      {!manage && (
+        <p className="li-muted" style={{ fontSize: 11.5, marginTop: 12 }}>
+          The number on a tile is how many times you've logged it today.
+        </p>
+      )}
 
       {editing && (
         <TileEditor

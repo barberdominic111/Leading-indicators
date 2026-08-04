@@ -98,8 +98,8 @@ export default function Settings() {
 
       <Section title="Detection window">
         <p className="li-muted" style={{ fontSize: 12.5, marginTop: -4, marginBottom: 10 }}>
-          Used to score FMEA detection and to bound the Timeline axis. Events near the start score better;
-          events near the end score worse.
+          Used to suggest a starting Detection value on the FMEA screen and to bound the Timeline axis. Events
+          near the start of this window suggest a better score; events near the end suggest a worse one.
         </p>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <label style={{ fontSize: 13 }} className="li-muted">
@@ -129,6 +129,9 @@ export default function Settings() {
         </div>
       </Section>
 
+      <ScaleSection title="Severity scale" category="severity" />
+      <ScaleSection title="Detection scale" category="detection" />
+
       <Section title="Data">
         <p className="li-muted" style={{ fontSize: 12.5, marginTop: -4, marginBottom: 10 }}>
           Everything stays on this device — no account, no cloud, no analytics.
@@ -147,5 +150,87 @@ function Section({ title, children }) {
       <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
+  )
+}
+
+function ScaleSection({ title, category }) {
+  const store = useStore()
+  const scale = store.settings.scales[category]
+  const sorted = [...scale].sort((a, b) => a.value - b.value)
+
+  function updateEntry(idx, patch) {
+    const next = scale.map((e, i) => (i === idx ? { ...e, ...patch } : e))
+    store.updateScales(category, next)
+  }
+
+  function removeEntry(idx) {
+    store.updateScales(
+      category,
+      scale.filter((_, i) => i !== idx)
+    )
+  }
+
+  function addEntry() {
+    const maxValue = scale.reduce((m, e) => Math.max(m, e.value), 0)
+    store.updateScales(category, [...scale, { value: Math.min(maxValue + 1, 10), label: '' }])
+  }
+
+  return (
+    <Section title={title}>
+      <p className="li-muted" style={{ fontSize: 12.5, marginTop: -4, marginBottom: 10 }}>
+        Add as many number/word thresholds as you want. Tapping the value on the FMEA screen cycles through these,
+        in ascending order, and shows the matching word.
+      </p>
+
+      {scale.map((entry, idx) => {
+        const trueIdx = idx
+        return (
+          <div key={trueIdx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={entry.value}
+              onChange={(e) => updateEntry(trueIdx, { value: Number(e.target.value) })}
+              style={{ width: 52, padding: '8px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-alt)', fontSize: 13 }}
+            />
+            <input
+              type="text"
+              value={entry.label}
+              placeholder="Word for this value"
+              onChange={(e) => updateEntry(trueIdx, { label: e.target.value })}
+              style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-alt)', fontSize: 13 }}
+            />
+            <button onClick={() => removeEntry(trueIdx)} style={{ color: 'var(--danger)', padding: 4 }}>
+              <IconX width={15} height={15} />
+            </button>
+          </div>
+        )
+      })}
+
+      <button
+        onClick={addEntry}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: 12.5,
+          color: 'var(--accent)',
+          border: '1px dashed var(--border)',
+          borderRadius: 8,
+          padding: '8px 12px',
+          marginTop: 4
+        }}
+      >
+        <IconPlus width={14} height={14} />
+        Add threshold
+      </button>
+
+      {sorted.length > 0 && (
+        <p className="li-muted li-mono" style={{ fontSize: 11, marginTop: 10 }}>
+          Cycle order: {sorted.map((e) => `${e.value}${e.label ? ` (${e.label})` : ''}`).join(' → ')}
+        </p>
+      )}
+    </Section>
   )
 }

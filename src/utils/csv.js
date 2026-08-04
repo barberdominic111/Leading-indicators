@@ -17,7 +17,7 @@ function section(title, csvBlock) {
   return `## ${title}\n${csvBlock}\n`
 }
 
-export function buildFullExport({ tiles, observations, projects, settings, fmeaRows, pareto, distribution, rollingTrend }) {
+export function buildFullExport({ tiles, observations, projects, completionTypes, completions, settings, fmeaRows, pareto, distribution, rollingTrend }) {
   const blocks = []
 
   blocks.push(
@@ -64,6 +64,27 @@ export function buildFullExport({ tiles, observations, projects, settings, fmeaR
           ...o,
           isoTime: new Date(o.timestamp).toISOString(),
           eventName: tiles.find((t) => t.id === o.eventId)?.name || o.eventId
+        }))
+      )
+    )
+  )
+
+  blocks.push(
+    section(
+      'Completion Types',
+      rows(['id', 'name'], completionTypes)
+    )
+  )
+
+  blocks.push(
+    section(
+      'Completions (finished work reported at check-in)',
+      rows(
+        ['id', 'timestamp', 'isoTime', 'completionType', 'quantity', 'note', 'project'],
+        completions.map((c) => ({
+          ...c,
+          isoTime: new Date(c.timestamp).toISOString(),
+          completionType: completionTypes.find((t) => t.id === c.completionTypeId)?.name || c.completionTypeId
         }))
       )
     )

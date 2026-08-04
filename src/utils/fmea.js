@@ -57,6 +57,10 @@ export function labelForScaleValue(value, scale) {
   return entry ? entry.label : null
 }
 
+export function sortFmeaRows(rows) {
+  return [...rows].sort((a, b) => (b.rpn ?? -1) - (a.rpn ?? -1))
+}
+
 export function buildFmea(tiles, observations, severityByTile, detectionByTile, detectionConfig, scales) {
   return tiles
     .filter((t) => t.active !== false)
@@ -78,7 +82,9 @@ export function buildFmea(tiles, observations, severityByTile, detectionByTile, 
         rpn
       }
     })
-    .sort((a, b) => (b.rpn ?? -1) - (a.rpn ?? -1))
+  // Not sorted here — the FMEA screen freezes display order until the
+  // person explicitly refreshes, so a tap on one card can't cause another
+  // card to jump underneath the next tap.
 }
 
 export const DEFAULT_DETECTION_CONFIG = {

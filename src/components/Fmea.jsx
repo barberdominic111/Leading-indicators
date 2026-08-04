@@ -1,6 +1,14 @@
 import { useStore } from '../store/StoreContext.jsx'
 import ScaleCycler from './ScaleCycler.jsx'
 
+// Description font shrinks as it gets longer so a full 160-character note
+// still fits the card without needing extra vertical space per row.
+function descriptionSize(len) {
+  if (len > 120) return 11.5
+  if (len > 70) return 12.5
+  return 13.5
+}
+
 export default function Fmea() {
   const store = useStore()
   const { scales } = store.settings
@@ -13,60 +21,59 @@ export default function Fmea() {
         the scale itself in Settings.
       </p>
 
-      <div className="li-card li-scroll" style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 620 }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-              {['Failure mode', 'Category', 'Occ.', 'Severity', 'Detection', 'RPN'].map((h) => (
-                <th key={h} className="li-muted" style={{ padding: '10px 12px', fontWeight: 500, fontSize: 11.5 }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {store.fmeaRows.map((row) => (
-              <tr key={row.tileId} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '10px 12px', fontWeight: 500 }}>{row.failureMode}</td>
-                <td style={{ padding: '10px 12px' }} className="li-muted">
-                  {row.category}
-                </td>
-                <td style={{ padding: '10px 12px' }} className="li-mono">
-                  {row.occurrence}
-                </td>
-                <td style={{ padding: '8px 10px' }}>
-                  <ScaleCycler
-                    value={row.severity}
-                    scale={scales.severity}
-                    onChange={(v) => store.setSeverity(row.tileId, v)}
-                  />
-                </td>
-                <td style={{ padding: '8px 10px' }}>
-                  <ScaleCycler
-                    value={row.detection}
-                    scale={scales.detection}
-                    onChange={(v) => store.setDetection(row.tileId, v)}
-                  />
-                </td>
-                <td style={{ padding: '10px 12px', fontWeight: 600 }} className="li-mono">
-                  {row.rpn ?? '—'}
-                </td>
-              </tr>
-            ))}
-            {store.fmeaRows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="li-muted" style={{ padding: 16, textAlign: 'center' }}>
-                  No active events yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {store.fmeaRows.map((row) => (
+        <div key={row.tileId} className="li-card" style={{ padding: 14, marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: row.description ? 4 : 8 }}>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>{row.failureMode}</span>
+            <span className="li-muted" style={{ fontSize: 11.5, whiteSpace: 'nowrap' }}>{row.category}</span>
+          </div>
 
-      <p className="li-muted" style={{ fontSize: 12, marginTop: 10 }}>
-        Detection starts from a suggested value based on when events tend to be noticed during the day (later
-        discovery suggests a worse score), but every tap is yours to keep — it won't reset on its own.
+          {row.description && (
+            <p
+              className="li-muted"
+              style={{ margin: '0 0 10px', fontSize: descriptionSize(row.description.length), lineHeight: 1.4 }}
+            >
+              {row.description}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', gap: 16, fontSize: 12.5, marginBottom: 10 }}>
+            <span className="li-muted">
+              Occ <span className="li-mono" style={{ color: 'var(--text)', fontWeight: 600 }}>{row.occurrence}</span>
+            </span>
+            <span className="li-muted">
+              RPN <span className="li-mono" style={{ color: 'var(--text)', fontWeight: 600 }}>{row.rpn ?? '—'}</span>
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <ScaleCycler
+              fullWidth
+              fieldLabel="Severity"
+              value={row.severity}
+              scale={scales.severity}
+              onChange={(v) => store.setSeverity(row.tileId, v)}
+            />
+            <ScaleCycler
+              fullWidth
+              fieldLabel="Detection"
+              value={row.detection}
+              scale={scales.detection}
+              onChange={(v) => store.setDetection(row.tileId, v)}
+            />
+          </div>
+        </div>
+      ))}
+
+      {store.fmeaRows.length === 0 && (
+        <p className="li-muted" style={{ fontSize: 13, textAlign: 'center', padding: 16 }}>
+          No active events yet.
+        </p>
+      )}
+
+      <p className="li-muted" style={{ fontSize: 12, marginTop: 4 }}>
+        Detection starts from a suggested value based on when events tend to be noticed during the day, but every
+        tap is yours to keep — it won't reset on its own.
       </p>
     </div>
   )

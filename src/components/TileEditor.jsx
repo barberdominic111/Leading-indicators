@@ -2,16 +2,18 @@ import { useState } from 'react'
 import { IconX } from './icons'
 
 const SWATCHES = ['#AD5B45', '#B5764B', '#B98A2E', '#6B8F71', '#4C6B8A', '#8A7A9B', '#7A8CA3', '#9C9892']
+const DESCRIPTION_MAX = 160
 
 export default function TileEditor({ initial, onSave, onDelete, onClose }) {
   const [name, setName] = useState(initial?.name || '')
   const [category, setCategory] = useState(initial?.category || '')
+  const [description, setDescription] = useState(initial?.description || '')
   const [color, setColor] = useState(initial?.color || SWATCHES[0])
   const [active, setActive] = useState(initial?.active !== false)
 
   function submit() {
     if (!name.trim()) return
-    onSave({ name: name.trim(), category: category.trim(), color, active })
+    onSave({ name: name.trim(), category: category.trim(), description: description.trim(), color, active })
   }
 
   return (
@@ -33,6 +35,19 @@ export default function TileEditor({ initial, onSave, onDelete, onClose }) {
 
         <label style={labelStyle}>Category</label>
         <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Quality" style={inputStyle} />
+
+        <label style={{ ...labelStyle, display: 'flex', justifyContent: 'space-between' }}>
+          <span>Description (optional)</span>
+          <span>{description.length}/{DESCRIPTION_MAX}</span>
+        </label>
+        <textarea
+          value={description}
+          maxLength={DESCRIPTION_MAX}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Context shown on the FMEA card"
+          rows={3}
+          style={{ ...inputStyle, resize: 'none' }}
+        />
 
         <label style={labelStyle}>Color</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>

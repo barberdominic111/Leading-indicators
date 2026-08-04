@@ -130,6 +130,22 @@ export function IconX(props) {
   )
 }
 
+export function IconChevronUp(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 15l6-6 6 6" />
+    </svg>
+  )
+}
+
+export function IconChevronDown(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  )
+}
+
 export function IconMinus(props) {
   return (
     <svg {...base} {...props}>

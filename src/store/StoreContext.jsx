@@ -106,12 +106,70 @@ export function StoreProvider({ children }) {
     setData((d) => ({ ...d, projects: [...d.projects, { id: newId('proj'), name }] }))
   }, [])
 
+  // Adds many projects at once (paste or file import), skipping names that
+  // already exist (case-insensitive) so re-importing the same list is safe.
+  const importProjects = useCallback((names) => {
+    setData((d) => {
+      const existing = new Set(d.projects.map((p) => p.name.trim().toLowerCase()))
+      const toAdd = []
+      names.forEach((raw) => {
+        const name = raw.trim()
+        if (!name) return
+        const key = name.toLowerCase()
+        if (existing.has(key)) return
+        existing.add(key)
+        toAdd.push({ id: newId('proj'), name })
+      })
+      return { ...d, projects: [...d.projects, ...toAdd] }
+    })
+  }, [])
+
   const updateProject = useCallback((id, patch) => {
     setData((d) => ({ ...d, projects: d.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)) }))
   }, [])
 
   const deleteProject = useCallback((id) => {
     setData((d) => ({ ...d, projects: d.projects.filter((p) => p.id !== id) }))
+  }, [])
+
+  // ---- Completion types & records ----
+  // "Completions" are the larger units of finished work a check-in reports
+  // separately from raw event taps — e.g. "10 finished goods" — so the
+  // count of taps and the count of things actually finished can differ.
+  const addCompletionType = useCallback((name, id) => {
+    setData((d) => {
+      const trimmed = name.trim()
+      if (!trimmed) return d
+      const exists = d.completionTypes.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())
+      if (exists) return d
+      return { ...d, completionTypes: [...d.completionTypes, { id: id || newId('ctype'), name: trimmed }] }
+    })
+  }, [])
+
+  const updateCompletionType = useCallback((id, patch) => {
+    setData((d) => ({ ...d, completionTypes: d.completionTypes.map((c) => (c.id === id ? { ...c, ...patch } : c)) }))
+  }, [])
+
+  const deleteCompletionType = useCallback((id) => {
+    setData((d) => ({ ...d, completionTypes: d.completionTypes.filter((c) => c.id !== id) }))
+  }, [])
+
+  // quantitiesMap: { completionTypeId: quantity }
+  const addCompletionsByQuantity = useCallback((quantitiesMap, extra = {}) => {
+    setData((d) => {
+      const now = Date.now()
+      const created = Object.entries(quantitiesMap)
+        .filter(([, qty]) => qty > 0)
+        .map(([completionTypeId, quantity]) => ({
+          id: newId('comp'),
+          timestamp: now,
+          completionTypeId,
+          quantity,
+          note: extra.note || '',
+          project: extra.project || d.settings.activeProjectId || ''
+        }))
+      return { ...d, completions: [...d.completions, ...created] }
+    })
   }, [])
 
   // ---- Settings ----
@@ -187,6 +245,8 @@ export function StoreProvider({ children }) {
     tiles: data.tiles,
     observations: data.observations,
     projects: data.projects,
+    completionTypes: data.completionTypes,
+    completions: data.completions,
     settings: data.settings,
     fmeaRows,
     addTile,
@@ -198,8 +258,13 @@ export function StoreProvider({ children }) {
     addObservationsByCount,
     deleteObservation,
     addProject,
+    importProjects,
     updateProject,
     deleteProject,
+    addCompletionType,
+    updateCompletionType,
+    deleteCompletionType,
+    addCompletionsByQuantity,
     updateSettings,
     setSeverity,
     setDetection,

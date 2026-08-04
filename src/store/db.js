@@ -36,6 +36,8 @@ const DEFAULT_DATA = {
   tiles: DEFAULT_TILES,
   observations: [],
   projects: [],
+  completionTypes: [],
+  completions: [],
   settings: {
     checkinTimes: ['08:00', '10:00', '12:00', '14:00', '16:00'],
     detectionConfig: DEFAULT_DETECTION_CONFIG,

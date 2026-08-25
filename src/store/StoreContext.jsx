@@ -3,6 +3,7 @@ import { loadData, saveData, newId } from './db'
 import { buildFmea } from '../utils/fmea'
 import { buildPareto, buildHeatmap, buildDistribution, buildRollingTrend } from '../utils/stats'
 import { fmtDate } from '../utils/time'
+import { DEFAULT_PROJECT_BALANCE } from '../utils/balance'
 
 const StoreContext = createContext(null)
 
@@ -103,7 +104,10 @@ export function StoreProvider({ children }) {
 
   // ---- Projects ----
   const addProject = useCallback((name) => {
-    setData((d) => ({ ...d, projects: [...d.projects, { id: newId('proj'), name }] }))
+    setData((d) => ({
+      ...d,
+      projects: [...d.projects, { id: newId('proj'), name, ...DEFAULT_PROJECT_BALANCE }]
+    }))
   }, [])
 
   // Adds many projects at once (paste or file import), skipping names that
@@ -118,7 +122,7 @@ export function StoreProvider({ children }) {
         const key = name.toLowerCase()
         if (existing.has(key)) return
         existing.add(key)
-        toAdd.push({ id: newId('proj'), name })
+        toAdd.push({ id: newId('proj'), name, ...DEFAULT_PROJECT_BALANCE })
       })
       return { ...d, projects: [...d.projects, ...toAdd] }
     })
@@ -191,6 +195,16 @@ export function StoreProvider({ children }) {
     }))
   }, [])
 
+  // 'positive' | 'negative' | null (neutral — doesn't count toward any
+  // project's balance). This is a global, per-tile setting, set on the
+  // FMEA card, independent of which project happens to be active.
+  const setPolarity = useCallback((tileId, polarity) => {
+    setData((d) => ({
+      ...d,
+      settings: { ...d.settings, polarityByTile: { ...d.settings.polarityByTile, [tileId]: polarity } }
+    }))
+  }, [])
+
   const updateScales = useCallback((category, scale) => {
     setData((d) => ({
       ...d,
@@ -224,7 +238,8 @@ export function StoreProvider({ children }) {
         data.settings.severityByTile,
         data.settings.detectionByTile,
         data.settings.detectionConfig,
-        data.settings.scales
+        data.settings.scales,
+        data.settings.polarityByTile
       ),
     [
       data.tiles,
@@ -232,7 +247,8 @@ export function StoreProvider({ children }) {
       data.settings.severityByTile,
       data.settings.detectionByTile,
       data.settings.detectionConfig,
-      data.settings.scales
+      data.settings.scales,
+      data.settings.polarityByTile
     ]
   )
 
@@ -240,6 +256,14 @@ export function StoreProvider({ children }) {
     (observations, projectId) => (projectId ? observations.filter((o) => o.project === projectId) : observations),
     []
   )
+
+  const fmeaByTileId = useMemo(() => {
+    const map = {}
+    fmeaRows.forEach((r) => {
+      map[r.tileId] = r
+    })
+    return map
+  }, [fmeaRows])
 
   const value = {
     tiles: data.tiles,
@@ -249,6 +273,7 @@ export function StoreProvider({ children }) {
     completions: data.completions,
     settings: data.settings,
     fmeaRows,
+    fmeaByTileId,
     addTile,
     updateTile,
     deleteTile,
@@ -268,6 +293,7 @@ export function StoreProvider({ children }) {
     updateSettings,
     setSeverity,
     setDetection,
+    setPolarity,
     updateScales,
     markCheckInHandled,
     filterByProject,

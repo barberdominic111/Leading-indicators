@@ -1,16 +1,19 @@
 import { useState, useMemo } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
 import { buildPareto, buildHeatmap, buildDistribution, buildRollingTrend } from '../utils/stats'
+import { computeBalancePoints, projectLabels, isBalanceOn } from '../utils/balance'
 import Pareto from './charts/Pareto.jsx'
 import HeatMap from './charts/HeatMap.jsx'
 import Distribution from './charts/Distribution.jsx'
 import RollingTrend from './charts/RollingTrend.jsx'
+import Balance from './charts/Balance.jsx'
 
 const SUBTABS = [
   { key: 'pareto', label: 'Pareto' },
   { key: 'heatmap', label: 'Heat Map' },
   { key: 'distribution', label: 'Distribution' },
-  { key: 'trend', label: 'Rolling Trend' }
+  { key: 'trend', label: 'Rolling Trend' },
+  { key: 'balance', label: 'Balance' }
 ]
 
 export default function Charts() {
@@ -40,6 +43,25 @@ export default function Charts() {
   const heatmapData = useMemo(() => buildHeatmap(filteredObs), [filteredObs])
   const distributionData = useMemo(() => buildDistribution(filteredObs), [filteredObs])
   const trendData = useMemo(() => buildRollingTrend(filteredObs), [filteredObs])
+
+  const selectedProject = store.projects.find((p) => p.id === projectFilter)
+  const balanceReady = isBalanceOn(selectedProject)
+  const balancePoints = useMemo(() => {
+    if (!balanceReady) return []
+    const tilesById = {}
+    store.tiles.forEach((t) => {
+      tilesById[t.id] = t
+    })
+    return computeBalancePoints(
+      store.observations,
+      selectedProject.id,
+      store.settings.polarityByTile,
+      selectedProject.weightMode,
+      store.fmeaByTileId,
+      tilesById
+    )
+  }, [balanceReady, selectedProject, store.observations, store.settings.polarityByTile, store.fmeaByTileId, store.tiles])
+  const balanceLabels = projectLabels(selectedProject)
 
   return (
     <div>
@@ -71,6 +93,7 @@ export default function Charts() {
               borderRadius: 999,
               fontSize: 12.5,
               textAlign: 'center',
+              gridColumn: t.key === 'balance' ? '1 / -1' : undefined,
               border: `1px solid ${sub === t.key ? 'var(--accent)' : 'var(--border)'}`,
               color: sub === t.key ? 'var(--accent)' : 'var(--text-muted)',
               background: sub === t.key ? 'var(--accent-soft)' : 'transparent'
@@ -86,6 +109,18 @@ export default function Charts() {
         {sub === 'heatmap' && <HeatMap grid={heatmapData} />}
         {sub === 'distribution' && <Distribution data={distributionData} />}
         {sub === 'trend' && <RollingTrend data={trendData} />}
+        {sub === 'balance' &&
+          (!projectFilter ? (
+            <p className="li-muted" style={{ fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
+              Select a specific project above to see its balance.
+            </p>
+          ) : !balanceReady ? (
+            <p className="li-muted" style={{ fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
+              Turn on balance tracking for {selectedProject.name} in the Projects tab to see this.
+            </p>
+          ) : (
+            <Balance points={balancePoints} positiveLabel={balanceLabels.positive} negativeLabel={balanceLabels.negative} zone={selectedProject.balanceZone ?? 3} />
+          ))}
       </div>
 
       {sub === 'pareto' && (

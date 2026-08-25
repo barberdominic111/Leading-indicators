@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
 import { IconPlus, IconX, IconCheck, IconImport } from './icons'
+import ProjectBalanceEditor from './ProjectBalanceEditor.jsx'
 
 export default function Projects() {
   const store = useStore()
@@ -9,6 +10,7 @@ export default function Projects() {
   const [editingName, setEditingName] = useState('')
   const [importing, setImporting] = useState(false)
   const [importText, setImportText] = useState('')
+  const [expandedId, setExpandedId] = useState(null)
   const fileInputRef = useRef(null)
 
   function add() {
@@ -154,6 +156,8 @@ export default function Projects() {
         const isActive = store.settings.activeProjectId === p.id
         const count = store.observations.filter((o) => o.project === p.id).length
         const isEditing = editingId === p.id
+        const isExpanded = expandedId === p.id
+        const balanceMode = p.balanceMode || 'off'
         return (
           <div
             key={p.id}
@@ -161,52 +165,70 @@ export default function Projects() {
             style={{
               padding: 14,
               marginBottom: 8,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
               border: `1.5px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`
             }}
           >
-            {isEditing ? (
-              <input
-                autoFocus
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    store.updateProject(p.id, { name: editingName.trim() || p.name })
-                    setEditingId(null)
-                  }
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {isEditing ? (
+                <input
+                  autoFocus
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      store.updateProject(p.id, { name: editingName.trim() || p.name })
+                      setEditingId(null)
+                    }
+                  }}
+                  style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 14 }}
+                />
+              ) : (
+                <button onClick={() => store.updateSettings({ activeProjectId: p.id })} style={{ textAlign: 'left', flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{p.name}</div>
+                  <div className="li-muted" style={{ fontSize: 11.5 }}>
+                    {count} observation{count === 1 ? '' : 's'}
+                  </div>
+                </button>
+              )}
+
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {isActive && !isEditing && <IconCheck width={17} height={17} color="var(--accent)" />}
+                {!isEditing && (
+                  <button
+                    onClick={() => {
+                      setEditingId(p.id)
+                      setEditingName(p.name)
+                    }}
+                    className="li-muted"
+                    style={{ fontSize: 12.5 }}
+                  >
+                    Edit
+                  </button>
+                )}
+                <button onClick={() => store.deleteProject(p.id)} style={{ color: 'var(--danger)', padding: 4 }}>
+                  <IconX width={16} height={16} />
+                </button>
+              </div>
+            </div>
+
+            {!isEditing && (
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                style={{
+                  marginTop: 10,
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: balanceMode !== 'off' ? 'var(--accent)' : 'var(--text-muted)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 999,
+                  padding: '5px 12px'
                 }}
-                style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 14 }}
-              />
-            ) : (
-              <button onClick={() => store.updateSettings({ activeProjectId: p.id })} style={{ textAlign: 'left', flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 500 }}>{p.name}</div>
-                <div className="li-muted" style={{ fontSize: 11.5 }}>
-                  {count} observation{count === 1 ? '' : 's'}
-                </div>
+              >
+                Balance: {balanceMode === 'off' ? 'Off' : balanceMode === 'solo' ? 'Solo' : 'Dyad'} {isExpanded ? '▴' : '▾'}
               </button>
             )}
 
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              {isActive && !isEditing && <IconCheck width={17} height={17} color="var(--accent)" />}
-              {!isEditing && (
-                <button
-                  onClick={() => {
-                    setEditingId(p.id)
-                    setEditingName(p.name)
-                  }}
-                  className="li-muted"
-                  style={{ fontSize: 12.5 }}
-                >
-                  Edit
-                </button>
-              )}
-              <button onClick={() => store.deleteProject(p.id)} style={{ color: 'var(--danger)', padding: 4 }}>
-                <IconX width={16} height={16} />
-              </button>
-            </div>
+            {isExpanded && !isEditing && <ProjectBalanceEditor project={p} onUpdate={(patch) => store.updateProject(p.id, patch)} />}
           </div>
         )
       })}

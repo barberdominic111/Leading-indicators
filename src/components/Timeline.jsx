@@ -88,6 +88,8 @@ export default function Timeline() {
                 {points.map((o) => {
                   const clamped = Math.min(Math.max(o.timestamp, rangeStart), rangeEnd)
                   const x = PAD_L + ((clamped - rangeStart) / rangeMs) * (width - PAD_L - PAD_R)
+                  const polarity = store.settings.polarityByTile[o.eventId] ?? null
+                  const ringColor = polarity === 'positive' ? 'var(--success)' : polarity === 'negative' ? 'var(--danger)' : null
                   return (
                     <circle
                       key={o.id}
@@ -95,6 +97,8 @@ export default function Timeline() {
                       cy={y + ROW_H / 2}
                       r={selected?.id === o.id ? 6 : 4.5}
                       fill={tile.color}
+                      stroke={ringColor || 'none'}
+                      strokeWidth={ringColor ? 2 : 0}
                       opacity={selected && selected.id !== o.id ? 0.45 : 1}
                       onClick={() => setSelected(o)}
                       style={{ cursor: 'pointer' }}
@@ -113,6 +117,15 @@ export default function Timeline() {
             {store.tiles.find((t) => t.id === selected.eventId)?.name}
           </div>
           <div className="li-muted">Time: {fmtClock(selected.timestamp)}</div>
+          {(() => {
+            const polarity = store.settings.polarityByTile[selected.eventId] ?? null
+            if (!polarity) return null
+            return (
+              <div style={{ color: polarity === 'positive' ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
+                {polarity === 'positive' ? 'Positive +' : 'Negative −'}
+              </div>
+            )
+          })()}
           {selected.project && <div className="li-muted">Project: {store.projects.find((p) => p.id === selected.project)?.name}</div>}
           {selected.customer && <div className="li-muted">Customer: {selected.customer}</div>}
           {selected.note && <div className="li-muted">Note: {selected.note}</div>}

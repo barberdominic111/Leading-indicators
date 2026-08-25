@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
 import ScaleCycler from './ScaleCycler.jsx'
+import PolarityToggle from './PolarityToggle.jsx'
 import { sortFmeaRows } from '../utils/fmea'
+import { projectLabels } from '../utils/balance'
 import { IconRefresh, IconCheck } from './icons'
 
 // Description font shrinks as it gets longer so a full 160-character note
@@ -15,6 +17,8 @@ function descriptionSize(len) {
 export default function Fmea() {
   const store = useStore()
   const { scales } = store.settings
+  const activeProject = store.projects.find((p) => p.id === store.settings.activeProjectId)
+  const labels = projectLabels(activeProject)
 
   // Row order is frozen until "Refresh RPN order" is tapped, so cycling a
   // Severity or Detection value on one card never causes another card to
@@ -71,8 +75,8 @@ export default function Fmea() {
         </button>
       </div>
       <p className="li-muted" style={{ margin: '2px 0 14px', fontSize: 13 }}>
-        Cards stay put while you work — tap Severity or Detection to cycle your configured scale, then refresh
-        whenever you want the ranking by RPN updated.
+        Cards stay put while you work — tap Severity, Detection, or Polarity to cycle. Polarity marks whether a
+        tile counts as positive or negative toward a project's balance{activeProject ? ` (using ${activeProject.name}'s labels)` : ''}; refresh whenever you want the ranking by RPN updated.
       </p>
 
       {orderedRows.map((row) => (
@@ -100,7 +104,7 @@ export default function Fmea() {
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
             <ScaleCycler
               fullWidth
               fieldLabel="Severity"
@@ -114,6 +118,12 @@ export default function Fmea() {
               value={row.detection}
               scale={scales.detection}
               onChange={(v) => store.setDetection(row.tileId, v)}
+            />
+            <PolarityToggle
+              value={store.settings.polarityByTile[row.tileId] ?? null}
+              positiveLabel={labels.positive}
+              negativeLabel={labels.negative}
+              onChange={(v) => store.setPolarity(row.tileId, v)}
             />
           </div>
         </div>

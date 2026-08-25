@@ -3,6 +3,7 @@ import { useStore } from '../store/StoreContext.jsx'
 import TileEditor from './TileEditor.jsx'
 import { IconPlus, IconChevronUp, IconChevronDown } from './icons'
 import { startOfDay } from '../utils/time'
+import { projectLabels, isBalanceOn } from '../utils/balance'
 
 function lerp(min, max, t) {
   return min + (max - min) * t
@@ -28,6 +29,10 @@ export default function Events() {
   const tiles = manage ? store.tiles : store.tiles.filter((t) => t.active !== false)
   const tileSize = store.settings.tileSize ?? 50
   const dims = sizeStyle(tileSize)
+
+  const activeProject = store.projects.find((p) => p.id === store.settings.activeProjectId)
+  const balanceOn = isBalanceOn(activeProject)
+  const labels = projectLabels(activeProject)
 
   const todayCounts = useMemo(() => {
     const start = startOfDay()
@@ -147,6 +152,11 @@ export default function Events() {
             )
           }
 
+          const polarity = store.settings.polarityByTile[tile.id] ?? null
+          const showPolarity = balanceOn && polarity
+          const polarityColor = polarity === 'positive' ? 'var(--success)' : polarity === 'negative' ? 'var(--danger)' : null
+          const polarityText = polarity === 'positive' ? labels.positive : polarity === 'negative' ? labels.negative : null
+
           return (
             <button
               key={tile.id}
@@ -161,7 +171,7 @@ export default function Events() {
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 gap: 10,
-                borderLeft: `4px solid ${tile.color}`,
+                borderLeft: `4px solid ${showPolarity ? polarityColor : tile.color}`,
                 '--flash-color': `${tile.color}33`
               }}
             >
@@ -169,6 +179,11 @@ export default function Events() {
               <span className="li-muted" style={{ fontSize: dims.categoryFontSize }}>
                 {tile.category || 'Uncategorized'}
               </span>
+              {showPolarity && (
+                <span style={{ fontSize: dims.categoryFontSize, fontWeight: 600, color: polarityColor }}>
+                  {polarityText} {polarity === 'positive' ? '+' : '−'}
+                </span>
+              )}
 
               {count > 0 && (
                 <span

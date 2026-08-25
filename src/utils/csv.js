@@ -36,7 +36,15 @@ export function buildFullExport({ tiles, observations, projects, completionTypes
     )
   )
 
-  blocks.push(section('Projects', rows(['id', 'name'], projects)))
+  blocks.push(
+    section(
+      'Projects',
+      rows(
+        ['id', 'name', 'balanceMode', 'positiveLabel', 'negativeLabel', 'personAName', 'personBName', 'weightMode', 'balanceZone'],
+        projects
+      )
+    )
+  )
 
   blocks.push(
     section(
@@ -124,7 +132,7 @@ export function buildFullExport({ tiles, observations, projects, completionTypes
     section(
       'Generated FMEA',
       rows(
-        ['failureMode', 'category', 'occurrence', 'severity', 'detection', 'rpn'],
+        ['failureMode', 'category', 'occurrence', 'severity', 'detection', 'polarity', 'rpn'],
         fmeaRows
       )
     )

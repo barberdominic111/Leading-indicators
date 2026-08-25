@@ -71,7 +71,7 @@ export function sortFmeaRows(rows) {
   })
 }
 
-export function buildFmea(tiles, observations, severityByTile, detectionByTile, detectionConfig, scales) {
+export function buildFmea(tiles, observations, severityByTile, detectionByTile, detectionConfig, scales, polarityByTile = {}) {
   return tiles
     .filter((t) => t.active !== false)
     .map((tile) => {
@@ -89,6 +89,7 @@ export function buildFmea(tiles, observations, severityByTile, detectionByTile, 
         occurrence,
         severity,
         detection,
+        polarity: polarityByTile[tile.id] ?? null,
         rpn
       }
     })

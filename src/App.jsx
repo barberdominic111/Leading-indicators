@@ -8,6 +8,7 @@ import Charts from './components/Charts.jsx'
 import Projects from './components/Projects.jsx'
 import Settings from './components/Settings.jsx'
 import CheckInModal from './components/CheckInModal.jsx'
+import ProjectLensBar from './components/ProjectLensBar.jsx'
 import { IconExport, IconSun, IconMoon, IconLeaf } from './components/icons'
 import { useTheme } from './theme/ThemeContext.jsx'
 import { useStore } from './store/StoreContext.jsx'
@@ -131,6 +132,8 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      <ProjectLensBar />
 
       <main className="li-scroll" style={{ flex: 1, padding: 16, paddingBottom: 24 }}>
         {screens[tab]}

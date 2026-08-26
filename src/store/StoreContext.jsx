@@ -41,12 +41,13 @@ export function StoreProvider({ children }) {
 
   // ---- Observations ----
   const addObservation = useCallback((eventId, extra = {}) => {
+    const id = newId('obs')
     setData((d) => ({
       ...d,
       observations: [
         ...d.observations,
         {
-          id: newId('obs'),
+          id,
           timestamp: Date.now(),
           eventId,
           note: extra.note || '',
@@ -56,6 +57,7 @@ export function StoreProvider({ children }) {
         }
       ]
     }))
+    return id
   }, [])
 
   const addObservationsBatch = useCallback((eventIds, extra = {}) => {

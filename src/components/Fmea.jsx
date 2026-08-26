@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
 import ScaleCycler from './ScaleCycler.jsx'
 import PolarityToggle from './PolarityToggle.jsx'
-import { sortFmeaRows } from '../utils/fmea'
+import { buildFmea, sortFmeaRows } from '../utils/fmea'
 import { projectLabels } from '../utils/balance'
 import { IconRefresh, IconCheck } from './icons'
 
@@ -17,31 +17,62 @@ function descriptionSize(len) {
 export default function Fmea() {
   const store = useStore()
   const { scales } = store.settings
-  const activeProject = store.projects.find((p) => p.id === store.settings.activeProjectId)
+  const lens = store.settings.activeProjectId
+  const activeProject = store.projects.find((p) => p.id === lens)
   const labels = projectLabels(activeProject)
+
+  // The central store.fmeaRows selector is intentionally unfiltered (it
+  // backs the CSV export, a full backup). This screen instead builds its
+  // own rows from whichever observations the current project lens allows,
+  // so Occurrence and RPN reflect only the project you're viewing.
+  const scopedObservations = useMemo(
+    () => (lens ? store.observations.filter((o) => o.project === lens) : store.observations),
+    [store.observations, lens]
+  )
+  const fmeaRows = useMemo(
+    () =>
+      buildFmea(
+        store.tiles,
+        scopedObservations,
+        store.settings.severityByTile,
+        store.settings.detectionByTile,
+        store.settings.detectionConfig,
+        store.settings.scales,
+        store.settings.polarityByTile
+      ),
+    [
+      store.tiles,
+      scopedObservations,
+      store.settings.severityByTile,
+      store.settings.detectionByTile,
+      store.settings.detectionConfig,
+      store.settings.scales,
+      store.settings.polarityByTile
+    ]
+  )
 
   // Row order is frozen until "Refresh RPN order" is tapped, so cycling a
   // Severity or Detection value on one card never causes another card to
   // jump underneath your next tap.
-  const [order, setOrder] = useState(() => sortFmeaRows(store.fmeaRows).map((r) => r.tileId))
+  const [order, setOrder] = useState(() => sortFmeaRows(fmeaRows).map((r) => r.tileId))
   const [justRefreshed, setJustRefreshed] = useState(false)
 
   const rowsById = useMemo(() => {
     const map = {}
-    store.fmeaRows.forEach((r) => {
+    fmeaRows.forEach((r) => {
       map[r.tileId] = r
     })
     return map
-  }, [store.fmeaRows])
+  }, [fmeaRows])
 
   const orderedRows = useMemo(() => {
     const known = new Set(order)
-    const newOnes = store.fmeaRows.filter((r) => !known.has(r.tileId)).map((r) => r.tileId)
+    const newOnes = fmeaRows.filter((r) => !known.has(r.tileId)).map((r) => r.tileId)
     return [...order, ...newOnes].map((id) => rowsById[id]).filter(Boolean)
-  }, [order, store.fmeaRows, rowsById])
+  }, [order, fmeaRows, rowsById])
 
   function refresh() {
-    setOrder(sortFmeaRows(store.fmeaRows).map((r) => r.tileId))
+    setOrder(sortFmeaRows(fmeaRows).map((r) => r.tileId))
     setJustRefreshed(true)
     setTimeout(() => setJustRefreshed(false), 1100)
   }
@@ -50,7 +81,7 @@ export default function Fmea() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>FMEA</h1>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>{activeProject ? `FMEA · ${activeProject.name}` : 'FMEA'}</h1>
         </div>
         <button
           type="button"
@@ -75,6 +106,9 @@ export default function Fmea() {
         </button>
       </div>
       <p className="li-muted" style={{ margin: '2px 0 14px', fontSize: 13 }}>
+        {activeProject
+          ? `Occurrence and RPN below only count events logged under ${activeProject.name}.`
+          : 'Occurrence and RPN below count events across all projects.'}{' '}
         Cards stay put while you work — tap Severity, Detection, or Polarity to cycle. Polarity marks whether a
         tile counts as positive or negative toward a project's balance{activeProject ? ` (using ${activeProject.name}'s labels)` : ''}; refresh whenever you want the ranking by RPN updated.
       </p>

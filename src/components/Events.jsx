@@ -33,20 +33,27 @@ export default function Events() {
   const activeProject = store.projects.find((p) => p.id === store.settings.activeProjectId)
   const balanceOn = isBalanceOn(activeProject)
   const labels = projectLabels(activeProject)
+  const lens = store.settings.activeProjectId
+
+  const [undo, setUndo] = useState(null) // { obsId, tileName }
 
   const todayCounts = useMemo(() => {
     const start = startOfDay()
     const counts = {}
     store.observations.forEach((o) => {
-      if (o.timestamp >= start) counts[o.eventId] = (counts[o.eventId] || 0) + 1
+      if (o.timestamp < start) return
+      if (lens && o.project !== lens) return
+      counts[o.eventId] = (counts[o.eventId] || 0) + 1
     })
     return counts
-  }, [store.observations])
+  }, [store.observations, lens])
 
-  function logTile(id) {
-    store.addObservation(id)
+  function logTile(id, name) {
+    const obsId = store.addObservation(id)
     setPulsing(id)
     setTimeout(() => setPulsing((cur) => (cur === id ? null : cur)), 420)
+    setUndo({ obsId, tileName: name })
+    setTimeout(() => setUndo((cur) => (cur?.obsId === obsId ? null : cur)), 5000)
   }
 
   return (
@@ -160,7 +167,7 @@ export default function Events() {
           return (
             <button
               key={tile.id}
-              onClick={() => logTile(tile.id)}
+              onClick={() => logTile(tile.id, tile.name)}
               className={`li-card${isPulsing ? ' li-tile-pulse li-tile-flash' : ''}`}
               style={{
                 position: 'relative',
@@ -239,6 +246,36 @@ export default function Events() {
         <p className="li-muted" style={{ fontSize: 11.5, marginTop: 12 }}>
           The number on a tile is how many times you've logged it today.
         </p>
+      )}
+
+      {undo && (
+        <div
+          className="li-card"
+          style={{
+            position: 'fixed',
+            left: 16,
+            right: 16,
+            bottom: 'calc(72px + env(safe-area-inset-bottom))',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            zIndex: 40,
+            boxShadow: '0 6px 20px rgba(0,0,0,0.15)'
+          }}
+        >
+          <span style={{ fontSize: 13.5 }}>Logged "{undo.tileName}"</span>
+          <button
+            onClick={() => {
+              store.deleteObservation(undo.obsId)
+              setUndo(null)
+            }}
+            style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}
+          >
+            Undo
+          </button>
+        </div>
       )}
 
       {editing && (

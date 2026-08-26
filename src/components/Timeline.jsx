@@ -9,8 +9,9 @@ const PAD_R = 16
 export default function Timeline() {
   const store = useStore()
   const [dateOffset, setDateOffset] = useState(0) // 0 = today, -1 = yesterday...
-  const [projectFilter, setProjectFilter] = useState('')
   const [selected, setSelected] = useState(null)
+
+  const lens = store.settings.activeProjectId
 
   const dayStart = startOfDay(Date.now() + dateOffset * 86400000)
   const dayEnd = endOfDay(Date.now() + dateOffset * 86400000)
@@ -22,16 +23,16 @@ export default function Timeline() {
 
   const dayObs = useMemo(() => {
     let obs = store.observations.filter((o) => o.timestamp >= dayStart && o.timestamp <= dayEnd)
-    if (projectFilter) obs = obs.filter((o) => o.project === projectFilter)
+    if (lens) obs = obs.filter((o) => o.project === lens)
     return obs
-  }, [store.observations, dayStart, dayEnd, projectFilter])
+  }, [store.observations, dayStart, dayEnd, lens])
 
   const activeTiles = store.tiles.filter((t) => t.active !== false)
   const width = 340
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Timeline</h1>
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={() => setDateOffset((d) => d - 1)} style={navBtn}>
@@ -45,21 +46,6 @@ export default function Timeline() {
           </button>
         </div>
       </div>
-
-      {store.projects.length > 0 && (
-        <select
-          value={projectFilter}
-          onChange={(e) => setProjectFilter(e.target.value)}
-          style={{ marginBottom: 12, padding: '8px 10px', borderRadius: 999, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 13 }}
-        >
-          <option value="">All projects</option>
-          {store.projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      )}
 
       <div className="li-card" style={{ padding: 14 }}>
         <svg viewBox={`0 0 ${width} ${activeTiles.length * ROW_H + 30}`} width="100%">
@@ -129,9 +115,20 @@ export default function Timeline() {
           {selected.project && <div className="li-muted">Project: {store.projects.find((p) => p.id === selected.project)?.name}</div>}
           {selected.customer && <div className="li-muted">Customer: {selected.customer}</div>}
           {selected.note && <div className="li-muted">Note: {selected.note}</div>}
-          <button onClick={() => setSelected(null)} style={{ marginTop: 8, fontSize: 12.5, color: 'var(--accent)' }}>
-            Close
-          </button>
+          <div style={{ display: 'flex', gap: 14, marginTop: 8 }}>
+            <button onClick={() => setSelected(null)} style={{ fontSize: 12.5, color: 'var(--accent)' }}>
+              Close
+            </button>
+            <button
+              onClick={() => {
+                store.deleteObservation(selected.id)
+                setSelected(null)
+              }}
+              style={{ fontSize: 12.5, color: 'var(--danger)' }}
+            >
+              Delete this entry
+            </button>
+          </div>
         </div>
       )}
 

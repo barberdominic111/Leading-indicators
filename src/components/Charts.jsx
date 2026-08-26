@@ -19,11 +19,11 @@ const SUBTABS = [
 export default function Charts() {
   const store = useStore()
   const [sub, setSub] = useState('pareto')
-  const [projectFilter, setProjectFilter] = useState('')
+  const lens = store.settings.activeProjectId || ''
 
   const filteredObs = useMemo(
-    () => (projectFilter ? store.observations.filter((o) => o.project === projectFilter) : store.observations),
-    [store.observations, projectFilter]
+    () => (lens ? store.observations.filter((o) => o.project === lens) : store.observations),
+    [store.observations, lens]
   )
 
   const paretoData = useMemo(
@@ -44,7 +44,7 @@ export default function Charts() {
   const distributionData = useMemo(() => buildDistribution(filteredObs), [filteredObs])
   const trendData = useMemo(() => buildRollingTrend(filteredObs), [filteredObs])
 
-  const selectedProject = store.projects.find((p) => p.id === projectFilter)
+  const selectedProject = store.projects.find((p) => p.id === lens)
   const balanceReady = isBalanceOn(selectedProject)
   const balancePoints = useMemo(() => {
     if (!balanceReady) return []
@@ -65,23 +65,7 @@ export default function Charts() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Charts</h1>
-        {store.projects.length > 0 && (
-          <select
-            value={projectFilter}
-            onChange={(e) => setProjectFilter(e.target.value)}
-            style={{ padding: '7px 10px', borderRadius: 999, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 12.5 }}
-          >
-            <option value="">All projects</option>
-            {store.projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+      <h1 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 600 }}>Charts</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 14 }}>
         {SUBTABS.map((t) => (
@@ -110,9 +94,9 @@ export default function Charts() {
         {sub === 'distribution' && <Distribution data={distributionData} />}
         {sub === 'trend' && <RollingTrend data={trendData} />}
         {sub === 'balance' &&
-          (!projectFilter ? (
+          (!lens ? (
             <p className="li-muted" style={{ fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
-              Select a specific project above to see its balance.
+              Pick a specific project in the "Viewing" bar above to see its balance.
             </p>
           ) : !balanceReady ? (
             <p className="li-muted" style={{ fontSize: 13, textAlign: 'center', padding: '24px 0' }}>

@@ -1,48 +1,62 @@
 import { useMemo } from 'react'
 import { useStore } from '../store/StoreContext.jsx'
-import { startOfDay, nextCheckIn, fmtClock, fmtDateTime } from '../utils/time'
+import { startOfDay, nextCheckIn, fmtClock } from '../utils/time'
+import { IconX } from './icons'
 
 export default function Dashboard({ onNavigate }) {
   const store = useStore()
+  const lens = store.settings.activeProjectId
+  const activeProject = store.projects.find((p) => p.id === lens)
+
+  const scopedObs = useMemo(
+    () => (lens ? store.observations.filter((o) => o.project === lens) : store.observations),
+    [store.observations, lens]
+  )
 
   const todayObs = useMemo(
-    () => store.observations.filter((o) => o.timestamp >= startOfDay()),
-    [store.observations]
+    () => scopedObs.filter((o) => o.timestamp >= startOfDay()),
+    [scopedObs]
   )
 
   const mostCommon = useMemo(() => {
     const counts = {}
-    store.observations.forEach((o) => {
+    scopedObs.forEach((o) => {
       counts[o.eventId] = (counts[o.eventId] || 0) + 1
     })
     const topId = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]
     return topId ? store.tiles.find((t) => t.id === topId) : null
-  }, [store.observations, store.tiles])
+  }, [scopedObs, store.tiles])
 
   const longestSince = useMemo(() => {
-    if (!store.observations.length) return null
-    const latest = Math.max(...store.observations.map((o) => o.timestamp))
+    if (!scopedObs.length) return null
+    const latest = Math.max(...scopedObs.map((o) => o.timestamp))
     return Date.now() - latest
-  }, [store.observations])
+  }, [scopedObs])
 
   const upcoming = nextCheckIn(store.settings.checkinTimes)
-  const activeProject = store.projects.find((p) => p.id === store.settings.activeProjectId)
+
+  const scopedCompletions = useMemo(
+    () => (lens ? store.completions.filter((c) => c.project === lens) : store.completions),
+    [store.completions, lens]
+  )
 
   const todayCompletions = useMemo(() => {
     const start = startOfDay()
     const byType = {}
-    store.completions.forEach((c) => {
+    scopedCompletions.forEach((c) => {
       if (c.timestamp < start) return
       byType[c.completionTypeId] = (byType[c.completionTypeId] || 0) + c.quantity
     })
     return Object.entries(byType)
       .map(([id, qty]) => ({ name: store.completionTypes.find((t) => t.id === id)?.name || 'Unknown', qty }))
       .sort((a, b) => b.qty - a.qty)
-  }, [store.completions, store.completionTypes])
+  }, [scopedCompletions, store.completionTypes])
 
   return (
     <div>
-      <h1 style={{ margin: '0 0 14px', fontSize: 20, fontWeight: 600 }}>Today</h1>
+      <h1 style={{ margin: '0 0 14px', fontSize: 20, fontWeight: 600 }}>
+        {activeProject ? `Today · ${activeProject.name}` : 'Today'}
+      </h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
         <StatCard label="Observations today" value={todayObs.length} />
@@ -60,12 +74,15 @@ export default function Dashboard({ onNavigate }) {
 
       <div className="li-card" style={{ padding: 16, marginBottom: 10 }}>
         <div className="li-muted" style={{ fontSize: 12, marginBottom: 4 }}>
-          Current project
+          Viewing
         </div>
-        <div style={{ fontSize: 15, fontWeight: 500 }}>{activeProject ? activeProject.name : 'None selected'}</div>
+        <div style={{ fontSize: 15, fontWeight: 500 }}>{activeProject ? activeProject.name : 'All projects'}</div>
+        <p className="li-muted" style={{ fontSize: 11.5, margin: '4px 0 8px' }}>
+          Every tab is scoped to this — change it from the bar at the top, or below.
+        </p>
         <button
           onClick={() => onNavigate('projects')}
-          style={{ fontSize: 13, color: 'var(--accent)', marginTop: 8 }}
+          style={{ fontSize: 13, color: 'var(--accent)' }}
         >
           Manage projects →
         </button>
@@ -89,12 +106,12 @@ export default function Dashboard({ onNavigate }) {
         <div className="li-muted" style={{ fontSize: 12, marginBottom: 8 }}>
           Recent activity
         </div>
-        {store.observations.length === 0 && (
+        {scopedObs.length === 0 && (
           <p className="li-muted" style={{ fontSize: 13, margin: 0 }}>
-            Nothing logged yet. Your next check-in will ask what happened.
+            {lens ? 'Nothing logged for this project yet.' : 'Nothing logged yet. Your next check-in will ask what happened.'}
           </p>
         )}
-        {store.observations
+        {scopedObs
           .slice()
           .sort((a, b) => b.timestamp - a.timestamp)
           .slice(0, 6)
@@ -111,11 +128,18 @@ export default function Dashboard({ onNavigate }) {
                   borderTop: '1px solid var(--border)'
                 }}
               >
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: tile?.color || 'var(--accent)' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: tile?.color || 'var(--accent)', flexShrink: 0 }} />
                 <span style={{ fontSize: 13.5, flex: 1 }}>{tile?.name || 'Unknown event'}</span>
                 <span className="li-muted li-mono" style={{ fontSize: 11.5 }}>
                   {fmtClock(o.timestamp)}
                 </span>
+                <button
+                  onClick={() => store.deleteObservation(o.id)}
+                  aria-label={`Remove ${tile?.name || 'event'} entry`}
+                  style={{ color: 'var(--text-muted)', padding: 2 }}
+                >
+                  <IconX width={13} height={13} />
+                </button>
               </div>
             )
           })}
